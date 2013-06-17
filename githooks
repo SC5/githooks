@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby 
+#
+require 'rubygems'
+require 'rugged'
+require 'optparse'
+
+repo = Rugged::Repository.new('/Users/janimikkonen/src/sc5/devtools')
+
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: git-hooker [options]"
+
+  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+    options[:verbose] = v
+  end
+
+  opts.on("-a", "--available-hooks [CHAIN]","Lists all available hooks") do |ext|
+    options[:action] = :listAll
+    options[:extra] = ext
+    options[:extra] ||= :default
+  end
+
+  opts.on("-l", "--list-installed-hooks [CHAIN]","Lists installed hooks on given repository") do |ext|
+    options[:action] = :listinstalled
+    options[:extra] = ext
+    options[:extra] ||= :default
+  end
+  
+  opts.on("-d", "--delete-hook=hookname]","Lists installed hooks on given repository") do |ext|
+    options[:action] = :deletehook
+    options[:extra] = ext
+    options[:extra] ||= :default
+  end
+end.parse!
+
+
+
+if __FILE__ == $0 then
+  p options
+
+
+end
