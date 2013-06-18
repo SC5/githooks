@@ -1,15 +1,103 @@
 #!/usr/bin/env ruby 
-#
+5
 require 'rubygems'
-require 'rugged'
+require 'grit'
 require 'optparse'
 
-repo = Rugged::Repository.new('/Users/janimikkonen/src/sc5/devtools')
+options = {}
 
+class GitHooks 
+  def initialize(opts)
+    @options = opts
+    @options[:repodir] ||= path = %x[git rev-parse --show-toplevel 2>/dev/null].chomp
+    @options[:action] ||= :default
+    @options[:status] = true
+    @options[:githooksdir] ||= File.expand_path(File.join(File.dirname(__FILE__),"hooks"))
+    @options[:chains] = [ 'applypatch-msg', 'commit-msg', 'post-applypatch', 'post-checkout', 'post-commit', 
+                          'post-merge', 'post-receive', 'post-rewrite', 'post-update', 'pre-applypatch', 
+                          'pre-auto-gc', 'pre-commit', 'pre-rebase', 'pre-receive', 'prepare-commit-msg', 
+                          'update'] 
+
+    begin
+      @repo = Grit::Repo.new(@options[:repodir])
+    rescue
+      @options[:status] = false
+    end
+    # p @options
+  end
+
+  def getItems
+    items = @options[:chains]
+    items = @options[:extra] if @options[:extra] != :default and @options[:chains].include?@options[:extra]
+    return items
+  end
+
+  def listAll
+    items = getItems
+    puts "Available git hooks"
+    items.each { |item| 
+      # puts "#{@options[:githooksdir]}/#{item}\n"
+      tmp = []
+      pattern = "#{@options[:githooksdir]}/#{item}/*"
+      Dir.glob(pattern).each { |entry|
+        tmp << File::basename(entry)
+      }
+      puts "#{item}: #{tmp.join(", ")}" if tmp.length>0
+    }
+    return 0
+  end
+
+  def listInstalled
+    items = getItems
+    puts "Installed git hooks"
+    items.each { |item| 
+      tmp = []
+      pattern = "#{@repo.path}/hooks/#{item}.*"
+      Dir.glob(pattern).each { |entry|
+        begin 
+          entry.slice! "#{item}."
+          tmp << File::basename(entry) 
+        end if ! entry.include?(".sample")
+      }
+      puts "#{item}: #{tmp.join(", ")}" if tmp.length>0
+    }
+    return 0
+  end
+
+  def isRepoValidForGitHookChains
+
+  end
+
+  def deleteHook
+  end
+
+  def run
+    ret = 0
+    if @options[:status] == true then
+      case @options[:action]
+      when :listAll
+        ret = listAll
+      when :listInstalled
+        ret = listInstalled
+      when :deleteHook
+        ret = deleteHook 
+      when :default
+        p @options
+      else
+        puts "Unknown action"
+        ret = 1
+      end
+    else
+      ret = 2
+    end
+    return ret
+  end
+end 
 
 options = {}
+
 OptionParser.new do |opts|
-  opts.banner = "Usage: git-hooker [options]"
+  opts.banner = "Usage: githooks [options]"
 
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     options[:verbose] = v
@@ -22,22 +110,27 @@ OptionParser.new do |opts|
   end
 
   opts.on("-l", "--list-installed-hooks [CHAIN]","Lists installed hooks on given repository") do |ext|
-    options[:action] = :listinstalled
+    options[:action] = :listInstalled
     options[:extra] = ext
     options[:extra] ||= :default
   end
   
   opts.on("-d", "--delete-hook=hookname]","Lists installed hooks on given repository") do |ext|
-    options[:action] = :deletehook
+    options[:action] = :deleterHook
     options[:extra] = ext
     options[:extra] ||= :default
   end
+
+  opts.on("-r", "--repository=directory","Use given clone instead of current repository") do |dir|
+    options[:repodir] = File::expand_path(dir)
+  end
 end.parse!
 
-
-
 if __FILE__ == $0 then
-  p options
-
-
+  options[:invoked] = :executable
+  hooks = GitHooks.new(options)
+  exit hooks.run
+else 
+  options[:invoked] = :module
 end
+
