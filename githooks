@@ -11,19 +11,22 @@ class GitHooks
     @options = opts
     @options[:repodir] ||= path = %x[git rev-parse --show-toplevel 2>/dev/null].chomp
     @options[:action] ||= :default
+    @options[:quiet] ||= false
     @options[:status] = true
     @options[:githooksdir] ||= File.expand_path(File.join(File.dirname(__FILE__),"hooks"))
     @options[:chains] = [ 'applypatch-msg', 'commit-msg', 'post-applypatch', 'post-checkout', 'post-commit', 
                           'post-merge', 'post-receive', 'post-rewrite', 'post-update', 'pre-applypatch', 
                           'pre-auto-gc', 'pre-commit', 'pre-rebase', 'pre-receive', 'prepare-commit-msg', 
                           'update'] 
-
+    @options[:hooks] = []
     begin
       @repo = Grit::Repo.new(@options[:repodir])
-    rescue
+      listAll(true)
+    rescue Exception => e
+      puts "AFTER RESCUE\n"
+      puts e
       @options[:status] = false
     end
-    # p @options
   end
 
   def getItems
@@ -32,18 +35,20 @@ class GitHooks
     return items
   end
 
-  def listAll
+  def listAll(quiet = false )
     items = getItems
-    puts "Available git hooks"
+    puts "Available git hooks" if quiet == false
+    storage = {}
     items.each { |item| 
-      # puts "#{@options[:githooksdir]}/#{item}\n"
       tmp = []
       pattern = "#{@options[:githooksdir]}/#{item}/*"
       Dir.glob(pattern).each { |entry|
         tmp << File::basename(entry)
       }
-      puts "#{item}: #{tmp.join(", ")}" if tmp.length>0
+      storage[item] = tmp 
+      puts "#{item}: #{tmp.join(", ")}" if tmp.length>0  and quiet == false
     }
+    @options[:hooks] = storage
     return 0
   end
 
@@ -64,8 +69,53 @@ class GitHooks
     return 0
   end
 
-  def isRepoValidForGitHookChains
+  def isRepoValidForGitHookChains(chain = nil)
+    items = getItems
+    items = chain if chain != nil  
+    ret = 0
+    items.each { |entry|
+        source = "#{@repo.path}/hooks/#{item}"
+        target = "#{@options[:githooksdir]}/hookchain"
+        if File::exists?(source) then
+          if File::symlink?(source) == false or File::readlink(source).equals(target) == false then
+            ret = 1
+          end
+        end
+    }
+    return ret
+  end
 
+  def getChainFromHooks(hook)
+    @options[:hooks].each { |key|
+      return key if @options[:hooks][key].include?(hook)
+    }
+    return nil
+  end
+
+  def installHook
+    ret = 1
+    hook = @options[:extra]
+    chain = getChainFromHooks(hook) 
+    if chain != nil then
+      target = "#{@repo.path}/hooks/#{chain}.#{hook}"
+      source = "#{@options[:githooksdir]}/#{chain}/#{hook}"
+      if File::symlink(source, target) then
+        ret = 0
+      end
+    end
+    return ret 
+  end
+
+  def installHookChain(chain)
+    ret = 1
+    if isRepoValidForGitHookChains(chain) then
+      source = "#{@repo.path}/hooks/#{item}"
+      target = "#{@options[:githooksdir]}/hookchain"
+      if File::symlink(source, target) then
+        ret = 0
+      end
+    end
+    return 0
   end
 
   def deleteHook
@@ -102,6 +152,10 @@ OptionParser.new do |opts|
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     options[:verbose] = v
   end
+  
+  opts.on("-q", "--quiet", "Run quietly") do
+    options[:quiet] = true
+  end
 
   opts.on("-a", "--available-hooks [CHAIN]","Lists all available hooks") do |ext|
     options[:action] = :listAll
@@ -119,6 +173,11 @@ OptionParser.new do |opts|
     options[:action] = :deleterHook
     options[:extra] = ext
     options[:extra] ||= :default
+  end
+
+  opts.on("-i", "--install-hook=hookname","Install given hook to current repository") do |hook|
+    options[:action] = :installHook
+    options[:extra] = hook
   end
 
   opts.on("-r", "--repository=directory","Use given clone instead of current repository") do |dir|
