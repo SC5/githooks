@@ -23,8 +23,6 @@ class GitHooks
       @repo = Grit::Repo.new(@options[:repodir])
       listAll(true)
     rescue Exception => e
-      puts "AFTER RESCUE\n"
-      puts e
       @options[:status] = false
     end
   end
@@ -52,9 +50,9 @@ class GitHooks
     return 0
   end
 
-  def listInstalled
+  def listInstalled(quiet = false)
     items = getItems
-    puts "Installed git hooks"
+    puts "Installed git hooks" if quiet == false
     items.each { |item| 
       tmp = []
       pattern = "#{@repo.path}/hooks/#{item}.*"
@@ -64,7 +62,7 @@ class GitHooks
           tmp << File::basename(entry) 
         end if ! entry.include?(".sample")
       }
-      puts "#{item}: #{tmp.join(", ")}" if tmp.length>0
+      puts "#{item}: #{tmp.join(", ")}" if tmp.length>0 and quiet == false
     }
     return 0
   end
