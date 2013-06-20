@@ -36,9 +36,9 @@ class GitHooks
   def listAll(quiet = false )
     items = getItems
     puts "Available git hooks" if quiet == false
-    storage = {}
+    storage = Hash.new
     items.each { |item| 
-      tmp = []
+      tmp = Array.new
       pattern = "#{@options[:githooksdir]}/#{item}/*"
       Dir.glob(pattern).each { |entry|
         tmp << File::basename(entry)
@@ -72,10 +72,10 @@ class GitHooks
     items = chain if chain != nil  
     ret = 0
     items.each { |entry|
-        source = "#{@repo.path}/hooks/#{item}"
+        source = "#{@repo.path}/hooks/#{entry}"
         target = "#{@options[:githooksdir]}/hookchain"
         if File::exists?(source) then
-          if File::symlink?(source) == false or File::readlink(source).equals(target) == false then
+          if File::symlink?(source) == false or (File::readlink(source) == target ) == false then
             ret = 1
           end
         end
@@ -84,8 +84,16 @@ class GitHooks
   end
 
   def getChainFromHooks(hook)
-    @options[:hooks].each { |key|
-      return key if @options[:hooks][key].include?(hook)
+    @options[:hooks].keys.each { |key|
+      if @options[:hooks][key]  != nil then
+        #puts "-----------------"
+        #p key
+        #p @options[:hooks][key]
+        #p hook
+        #p @options[:hooks][key].include?(hook)
+        #puts "-----------------"
+      end
+      return key if @options[:hooks][key] != nil and @options[:hooks][key].include?(hook)
     }
     return nil
   end
@@ -94,11 +102,16 @@ class GitHooks
     ret = 1
     hook = @options[:extra]
     chain = getChainFromHooks(hook) 
-    if chain != nil then
+    if chain != nil and installHookChain(chain) == 0 then
       target = "#{@repo.path}/hooks/#{chain}.#{hook}"
       source = "#{@options[:githooksdir]}/#{chain}/#{hook}"
-      if File::symlink(source, target) then
-        ret = 0
+      begin
+        if File::exists?(source) and File::symlink?(target) and File::readlink(target) == source then ## readlink should be enought but lets keep it like this
+          ret = 0
+        elsif File::symlink(source, target) then
+          ret = 0
+        end
+      rescue Exception => e
       end
     end
     return ret 
@@ -107,10 +120,14 @@ class GitHooks
   def installHookChain(chain)
     ret = 1
     if isRepoValidForGitHookChains(chain) then
-      source = "#{@repo.path}/hooks/#{item}"
-      target = "#{@options[:githooksdir]}/hookchain"
-      if File::symlink(source, target) then
-        ret = 0
+      target = "#{@repo.path}/hooks/#{chain}"
+      source = "#{@options[:githooksdir]}/hookchain"
+      begin
+        if File::exists?(target) and File::symlink?(target) and File::readlink(target) == source then
+          ret = 0
+        elsif File::symlink(source, target) then
+          ret = 0
+        end
       end
     end
     return 0
@@ -129,6 +146,8 @@ class GitHooks
         ret = listInstalled
       when :deleteHook
         ret = deleteHook 
+      when :installHook
+        ret = installHook
       when :default
         p @options
       else
