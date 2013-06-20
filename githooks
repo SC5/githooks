@@ -148,7 +148,7 @@ class GitHooks
       when :installHook
         ret = installHook
       when :default
-        p @options
+        puts @options[:opts].help
       else
         puts "Unknown action"
         ret = 1
@@ -199,6 +199,8 @@ OptionParser.new do |opts|
   opts.on("-r", "--repository=directory","Use given clone instead of current repository") do |dir|
     options[:repodir] = File::expand_path(dir)
   end
+
+  options[:opts] = opts
 end.parse!
 
 if __FILE__ == $0 then
