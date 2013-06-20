@@ -1,12 +1,11 @@
-#!/usr/bin/env ruby 
-5
+#!/usr/bin/env ruby
 require 'rubygems'
 require 'grit'
 require 'optparse'
 
 options = {}
 
-class GitHooks 
+class GitHooks
   def initialize(opts)
     @options = opts
     @options[:repodir] ||= path = %x[git rev-parse --show-toplevel 2>/dev/null].chomp
@@ -14,10 +13,10 @@ class GitHooks
     @options[:quiet] ||= false
     @options[:status] = true
     @options[:githooksdir] ||= File.expand_path(File.join(File.dirname(__FILE__),"hooks"))
-    @options[:chains] = [ 'applypatch-msg', 'commit-msg', 'post-applypatch', 'post-checkout', 'post-commit', 
-                          'post-merge', 'post-receive', 'post-rewrite', 'post-update', 'pre-applypatch', 
-                          'pre-auto-gc', 'pre-commit', 'pre-rebase', 'pre-receive', 'prepare-commit-msg', 
-                          'update'] 
+    @options[:chains] = [ 'applypatch-msg', 'commit-msg', 'post-applypatch', 'post-checkout', 'post-commit',
+                          'post-merge', 'post-receive', 'post-rewrite', 'post-update', 'pre-applypatch',
+                          'pre-auto-gc', 'pre-commit', 'pre-rebase', 'pre-receive', 'prepare-commit-msg',
+                          'update']
     @options[:hooks] = []
     begin
       @repo = Grit::Repo.new(@options[:repodir])
@@ -37,13 +36,13 @@ class GitHooks
     items = getItems
     puts "Available git hooks" if quiet == false
     storage = Hash.new
-    items.each { |item| 
+    items.each { |item|
       tmp = Array.new
       pattern = "#{@options[:githooksdir]}/#{item}/*"
       Dir.glob(pattern).each { |entry|
         tmp << File::basename(entry)
       }
-      storage[item] = tmp 
+      storage[item] = tmp
       puts "#{item}: #{tmp.join(", ")}" if tmp.length>0  and quiet == false
     }
     @options[:hooks] = storage
@@ -53,13 +52,13 @@ class GitHooks
   def listInstalled(quiet = false)
     items = getItems
     puts "Installed git hooks" if quiet == false
-    items.each { |item| 
+    items.each { |item|
       tmp = []
       pattern = "#{@repo.path}/hooks/#{item}.*"
       Dir.glob(pattern).each { |entry|
-        begin 
+        begin
           entry.slice! "#{item}."
-          tmp << File::basename(entry) 
+          tmp << File::basename(entry)
         end if ! entry.include?(".sample")
       }
       puts "#{item}: #{tmp.join(", ")}" if tmp.length>0 and quiet == false
@@ -69,7 +68,7 @@ class GitHooks
 
   def isRepoValidForGitHookChains(chain = nil)
     items = getItems
-    items = chain if chain != nil  
+    items = chain if chain != nil
     ret = 0
     items.each { |entry|
         source = "#{@repo.path}/hooks/#{entry}"
@@ -101,8 +100,9 @@ class GitHooks
   def installHook
     ret = 1
     hook = @options[:extra]
-    chain = getChainFromHooks(hook) 
+    chain = getChainFromHooks(hook)
     if chain != nil and installHookChain(chain) == 0 then
+      puts "baz"
       target = "#{@repo.path}/hooks/#{chain}.#{hook}"
       source = "#{@options[:githooksdir]}/#{chain}/#{hook}"
       begin
@@ -114,7 +114,7 @@ class GitHooks
       rescue Exception => e
       end
     end
-    return ret 
+    return ret
   end
 
   def installHookChain(chain)
@@ -145,7 +145,7 @@ class GitHooks
       when :listInstalled
         ret = listInstalled
       when :deleteHook
-        ret = deleteHook 
+        ret = deleteHook
       when :installHook
         ret = installHook
       when :default
@@ -159,7 +159,7 @@ class GitHooks
     end
     return ret
   end
-end 
+end
 
 options = {}
 
@@ -169,7 +169,7 @@ OptionParser.new do |opts|
   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
     options[:verbose] = v
   end
-  
+
   opts.on("-q", "--quiet", "Run quietly") do
     options[:quiet] = true
   end
@@ -185,7 +185,7 @@ OptionParser.new do |opts|
     options[:extra] = ext
     options[:extra] ||= :default
   end
-  
+
   opts.on("-d", "--delete-hook=hookname]","Lists installed hooks on given repository") do |ext|
     options[:action] = :deleterHook
     options[:extra] = ext
@@ -206,7 +206,7 @@ if __FILE__ == $0 then
   options[:invoked] = :executable
   hooks = GitHooks.new(options)
   exit hooks.run
-else 
+else
   options[:invoked] = :module
 end
 
