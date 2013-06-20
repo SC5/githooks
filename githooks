@@ -102,7 +102,6 @@ class GitHooks
     hook = @options[:extra]
     chain = getChainFromHooks(hook)
     if chain != nil and installHookChain(chain) == 0 then
-      puts "baz"
       target = "#{@repo.path}/hooks/#{chain}.#{hook}"
       source = "#{@options[:githooksdir]}/#{chain}/#{hook}"
       begin
