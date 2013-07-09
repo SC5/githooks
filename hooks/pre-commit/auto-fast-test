@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'grit'
+
+require 'optparse'
+
+class AutoFastTest
+  def initialize(*args)
+    @initialized = true
+    begin
+      repo = Grit::Repo.new("../..")
+      @git_root = repo.path
+      @test_driver = repo.config["hooks.test_driver"] || "grunt"
+      @test_target = repo.config["hooks.test_target"] || "test-fast"
+      @no_verify = false
+      if nil != ENV['GIT_NO_VERIFY'] then
+        @no_verify = true
+      end
+    rescue Exception => e
+      @initialized = false
+    end
+  end
+
+
+  def to_s
+    "Repo folder: #{@git_root}\nTest Driver: #{@test_driver}\nTest Target: #{@test_target}"
+  end
+
+  def run
+    ret = 1
+    if @initialized and @no_verify == false then
+      %x["#{@test_driver} #{@test_target}" ]
+      ret = $?.exitstatus
+    else
+      ret = 1
+    end
+  end
+end
+
+
+## Execute of main app
+if __FILE__ == $0 then
+  aft = AutoFastTest.new
+  exit aft.run
+end
