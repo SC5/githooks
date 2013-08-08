@@ -162,46 +162,51 @@ end
 
 options = {}
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: githooks [options]"
 
-  opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
-    options[:verbose] = v
-  end
+begin
+  OptionParser.new do |opts|
+    opts.banner = "Usage: githooks [options]"
 
-  opts.on("-q", "--quiet", "Run quietly") do
-    options[:quiet] = true
-  end
+    opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+      options[:verbose] = v
+    end
 
-  opts.on("-a", "--available-hooks [CHAIN]","Lists all available hooks") do |ext|
-    options[:action] = :listAll
-    options[:extra] = ext
-    options[:extra] ||= :default
-  end
+    opts.on("-q", "--quiet", "Run quietly") do
+      options[:quiet] = true
+    end
 
-  opts.on("-l", "--list-installed-hooks [CHAIN]","Lists installed hooks on given repository") do |ext|
-    options[:action] = :listInstalled
-    options[:extra] = ext
-    options[:extra] ||= :default
-  end
+    opts.on("-a", "--available-hooks [CHAIN]","Lists all available hooks") do |ext|
+      options[:action] = :listAll
+      options[:extra] = ext
+      options[:extra] ||= :default
+    end
 
-  opts.on("-d", "--delete-hook=hookname]","Lists installed hooks on given repository") do |ext|
-    options[:action] = :deleterHook
-    options[:extra] = ext
-    options[:extra] ||= :default
-  end
+    opts.on("-l", "--list-installed-hooks [CHAIN]","Lists installed hooks on given repository") do |ext|
+      options[:action] = :listInstalled
+      options[:extra] = ext
+      options[:extra] ||= :default
+    end
 
-  opts.on("-i", "--install-hook=hookname","Install given hook to current repository") do |hook|
-    options[:action] = :installHook
-    options[:extra] = hook
-  end
+    opts.on("-d", "--delete-hook=hookname]","Lists installed hooks on given repository") do |ext|
+      options[:action] = :deleterHook
+      options[:extra] = ext
+      options[:extra] ||= :default
+    end
 
-  opts.on("-r", "--repository=directory","Use given clone instead of current repository") do |dir|
-    options[:repodir] = File::expand_path(dir)
-  end
+    opts.on("-i", "--install-hook=hookname","Install given hook to current repository") do |hook|
+      options[:action] = :installHook
+      options[:extra] = hook
+    end
 
-  options[:opts] = opts
-end.parse!
+    opts.on("-r", "--repository=directory","Use given clone instead of current repository") do |dir|
+      options[:repodir] = File::expand_path(dir)
+    end
+
+    options[:opts] = opts
+  end.parse!
+rescue OptionParser::InvalidOption => e
+  puts "#{e}"
+end
 
 if __FILE__ == $0 then
   options[:invoked] = :executable
